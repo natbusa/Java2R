@@ -11,73 +11,103 @@ import org.rosuda.rserve.*;
 
 public class Forecast {
 
-  RConnection connection = null;
-  REngine engine = null;
-	  
-  public void main(String[] args) {
-	try {
-		connection = new RConnection();
-		engine = (REngine) connection;
-	} catch (Exception e) {
-	      System.out.println(e.toString());
-    }
-    
-    Forecast forecaster = new Forecast();
-    
-    forecaster.RCaller();
-    forecaster.RServe();
-    
-    if (connection!= null){
-        connection.close();
-        engine.close();
-    }
-  }
-  
-  public void RServe() {
-    try {
-    	final double x[] = connection.eval("rnorm(100)").asDoubles();
-        System.out.println(Arrays.toString(x));
-    } catch (Exception e) {
-	      System.out.println(e.toString());
-    }
-  }
-  
-  public void RCaller() {
-    Random random = new Random(12345);
-    double[] stockClosePrices = new double[100];
-    stockClosePrices[0] = 0;
-    for (int i = 1; i < stockClosePrices.length; i++) {
-      stockClosePrices[i] = 0.5 + 1 * stockClosePrices[i - 1] + random.nextGaussian();
-    }
-    RunRScript(stockClosePrices);
-  }
+	RConnection connection = null;
+	REngine engine = null;
 
-  public void RunRScript(double[] stockClosePrices) {
-    try {
+	public static void main(String[] args) {
+		new Forecast();
+	}
 
-      // define code to be run
-      RCode code = new RCode();
+	public Forecast() {
+		OpenRServeConnection();
 
-      code.addDoubleArray("x", stockClosePrices);
-      code.R_require("forecast");
-      code.addRCode("ww<-auto.arima(x)");
-      code.addRCode("tt<-forecast(ww,h=20)");
+		Run();
 
-      code.addRCode("myResult <- list(upper=tt$upper, lower=tt$lower, fitted = as.double(tt$fitted))");
+		CloseRServeConnection();
+	}
 
-      // set and run the caller
-      RCaller caller = new RCaller();
+	public void OpenRServeConnection() {
+		try {
+			connection = new RConnection();
+			engine = (REngine) connection;
 
-      caller.setRCode(code);
-      caller.setRscriptExecutable("/usr/bin/Rscript");
-      caller.runAndReturnResult("myResult");
+			connection.eval("library(forecast)");
+		} catch (Exception e) {
+			System.out.println(e.toString());
+		}
+	}
 
-      double[] fitted = caller.getParser().getAsDoubleArray("fitted");
+	public void CloseRServeConnection() {
+		if (connection != null) {
+			connection.close();
+			engine.close();
+		}
+	}
 
-      System.out.println(Arrays.toString(fitted));
-    } catch (Exception e) {
-      System.out.println(e.toString());
-    }
+	public void Run() {
+		double[] x = GenerateSamples();
 
-  }
+		System.out.println("RCaller forecast:");
+		RunRCaller(x);
+		System.out.println();
+
+		System.out.println("RServe  forecast:");
+		RunRServe(x);
+		System.out.println();
+	}
+
+	public void RunRServe(double[] stockClosePrices) {
+		try {
+			connection.assign("x", stockClosePrices);
+			final double[] predicted= connection
+					.eval("f = forecast(auto.arima(x), h=10, level=90); res=as.numeric(f$mean);res")
+					.asDoubles();
+
+			// on screen
+			System.out.println(Arrays.toString(predicted));
+
+		} catch (Exception e) {
+			System.out.println(e.toString());
+		}
+
+	}
+
+	public double[] GenerateSamples() {
+		Random random = new Random(12345);
+		double[] stockClosePrices = new double[100];
+		stockClosePrices[0] = 0;
+		for (int i = 1; i < stockClosePrices.length; i++) {
+			stockClosePrices[i] = 0.5 + 1 * stockClosePrices[i - 1]
+					+ random.nextGaussian();
+		}
+		return stockClosePrices;
+	}
+
+	public void RunRCaller(double[] stockClosePrices) {
+		try {
+
+			// define code to be run
+			RCode code = new RCode();
+
+			code.addDoubleArray("x", stockClosePrices);
+			code.R_require("forecast");
+			code.addRCode("f= forecast(auto.arima(x), h=10, level=90); res=predicted=as.numeric(f$mean)");
+
+			// set and run the caller
+			RCaller caller = new RCaller();
+
+			caller.setRCode(code);
+			caller.setRscriptExecutable("/usr/bin/Rscript");
+			caller.runAndReturnResult("res");
+
+			double[] predicted = caller.getParser().getAsDoubleArray("res");
+
+			// on screen
+			System.out.println(Arrays.toString(predicted));
+
+		} catch (Exception e) {
+			System.out.println(e.toString());
+		}
+
+	}
 }
