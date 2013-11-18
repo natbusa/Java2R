@@ -1,17 +1,48 @@
-package com.natalinobusa.java2r;
+package com.natalinobusa.Java2R;
 
 import java.util.Random;
+import java.util.Arrays;
 
 import com.mhsatman.rcaller.RCaller;
 import com.mhsatman.rcaller.RCode;
 
+import org.rosuda.rengine.*;
+import org.rosuda.rserve.*;
+
 public class Forecast {
 
-  public static void main(String[] args) {
-    new Forecast();
+  RConnection connection = null;
+  REngine engine = null;
+	  
+  public void main(String[] args) {
+	try {
+		connection = new RConnection();
+		engine = (REngine) connection;
+	} catch (Exception e) {
+	      System.out.println(e.toString());
+    }
+    
+    Forecast forecaster = new Forecast();
+    
+    forecaster.RCaller();
+    forecaster.RServe();
+    
+    if (connection!= null){
+        connection.close();
+        engine.close();
+    }
   }
-
-  public Forecast() {
+  
+  public void RServe() {
+    try {
+    	final double x[] = connection.eval("rnorm(100)").asDoubles();
+        System.out.println(Arrays.toString(x));
+    } catch (Exception e) {
+	      System.out.println(e.toString());
+    }
+  }
+  
+  public void RCaller() {
     Random random = new Random(12345);
     double[] stockClosePrices = new double[100];
     stockClosePrices[0] = 0;
@@ -41,17 +72,9 @@ public class Forecast {
       caller.setRscriptExecutable("/usr/bin/Rscript");
       caller.runAndReturnResult("myResult");
 
-      /*
-       * It is good to have a look at the XML file
-       * for having info about which variables are passed to result
-       */
-      System.out.println(caller.getParser().getXMLFileAsString());
-
-      double[] upValues = caller.getParser().getAsDoubleArray("upper");
-      double[] loValues = caller.getParser().getAsDoubleArray("lower");
       double[] fitted = caller.getParser().getAsDoubleArray("fitted");
 
-      System.out.println("success");
+      System.out.println(Arrays.toString(fitted));
     } catch (Exception e) {
       System.out.println(e.toString());
     }
