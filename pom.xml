@@ -1,0 +1,18 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <groupId>com.natalinobusa</groupId>
+  <artifactId>java2r</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Java to R</name>
+  <description>Connecting Java to R using different mechanisms (RCaller, and REngine)</description>
+  
+  <dependencies>
+  	<dependency>
+  		<groupId>com.mhsatman</groupId>
+  		<artifactId>rcaller</artifactId>
+  		<version>2.1.1-SNAPSHOT</version>
+  	</dependency>
+  </dependencies>
+
+</project>
